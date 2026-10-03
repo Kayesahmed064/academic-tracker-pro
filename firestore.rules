@@ -1,0 +1,222 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Schema Validation Helpers matching src/types.ts and firebase-blueprint.json
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'name', 'targetGPA', 'greeting', 'studentId',
+          'department', 'semester', 'batch', 'email', 'phone', 'address'
+        ]) &&
+        data.keys().hasOnly([
+          'name', 'profilePic', 'targetGPA', 'greeting', 'studentId',
+          'department', 'semester', 'batch', 'email', 'phone', 'address', 'theme'
+        ]) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        (!('profilePic' in data) || data.profilePic == null || (data.profilePic is string && data.profilePic.size() <= 500000)) &&
+        data.targetGPA is number && data.targetGPA >= 0 && data.targetGPA <= 4.0 &&
+        data.greeting is string && data.greeting.size() <= 120 &&
+        data.studentId is string && data.studentId.size() <= 64 &&
+        data.department is string && data.department.size() <= 120 &&
+        data.semester is string && data.semester.size() <= 64 &&
+        data.batch is string && data.batch.size() <= 64 &&
+        data.email is string && data.email.size() <= 150 &&
+        data.phone is string && data.phone.size() <= 50 &&
+        data.address is string && data.address.size() <= 250 &&
+        (!('theme' in data) || data.theme in ['light', 'dark']);
+    }
+
+    function isValidUserRootDoc(data) {
+      return data.keys().hasOnly([
+          'name', 'profilePic', 'targetGPA', 'greeting', 'studentId',
+          'department', 'semester', 'batch', 'email', 'phone', 'address',
+          'profile', 'theme', 'updatedAt', 'ctMarks', 'subjectMarks', 'subjects'
+        ]) &&
+        (!('name' in data) || (data.name is string && data.name.size() <= 100)) &&
+        (!('profilePic' in data) || data.profilePic == null || (data.profilePic is string && data.profilePic.size() <= 500000)) &&
+        (!('targetGPA' in data) || (data.targetGPA is number && data.targetGPA >= 0 && data.targetGPA <= 4.0)) &&
+        (!('greeting' in data) || (data.greeting is string && data.greeting.size() <= 120)) &&
+        (!('studentId' in data) || (data.studentId is string && data.studentId.size() <= 64)) &&
+        (!('department' in data) || (data.department is string && data.department.size() <= 120)) &&
+        (!('semester' in data) || (data.semester is string && data.semester.size() <= 64)) &&
+        (!('batch' in data) || (data.batch is string && data.batch.size() <= 64)) &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 50)) &&
+        (!('address' in data) || (data.address is string && data.address.size() <= 250)) &&
+        (!('ctMarks' in data) || data.ctMarks is list) &&
+        (!('subjectMarks' in data) || data.subjectMarks is map) &&
+        (!('subjects' in data) || data.subjects is list) &&
+        (!('profile' in data) || isValidUserProfile(data.profile)) &&
+        (!('theme' in data) || data.theme in ['light', 'dark']) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidSubject(data, subjectId) {
+      return data.keys().hasAll(['id', 'name', 'creditHours', 'colorTag']) &&
+        data.keys().hasOnly(['id', 'name', 'creditHours', 'colorTag']) &&
+        data.id == subjectId &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+        data.creditHours is number && data.creditHours >= 0 && data.creditHours <= 30 &&
+        data.colorTag is string && data.colorTag.size() >= 1 && data.colorTag.size() <= 32;
+    }
+
+    function isValidAttendance(data, attendanceId) {
+      return data.keys().hasAll(['id', 'subjectId', 'date', 'isPresent']) &&
+        data.keys().hasOnly(['id', 'subjectId', 'date', 'isPresent']) &&
+        data.id == attendanceId &&
+        isValidId(data.id) &&
+        isValidId(data.subjectId) &&
+        data.date is string && data.date.size() >= 1 && data.date.size() <= 64 &&
+        data.isPresent is bool;
+    }
+
+    function isValidCTMark(data, ctMarkId) {
+      return data.keys().hasAll(['id', 'subjectId', 'examName', 'markObtained', 'totalMark']) &&
+        data.keys().hasOnly(['id', 'subjectId', 'subjectName', 'examName', 'markObtained', 'totalMark']) &&
+        data.id == ctMarkId &&
+        isValidId(data.id) &&
+        isValidId(data.subjectId) &&
+        (!('subjectName' in data) || (data.subjectName is string && data.subjectName.size() <= 150)) &&
+        data.examName is string && data.examName.size() >= 1 && data.examName.size() <= 64 &&
+        data.markObtained is number && data.markObtained >= 0 &&
+        data.totalMark is number && data.totalMark > 0 &&
+        data.markObtained <= data.totalMark;
+    }
+
+    function isValidAcademicEvent(data, eventId) {
+      return data.keys().hasAll(['id', 'title', 'description', 'eventDate', 'type']) &&
+        data.keys().hasOnly(['id', 'title', 'description', 'eventDate', 'type', 'subjectId']) &&
+        data.id == eventId &&
+        isValidId(data.id) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 150 &&
+        data.description is string && data.description.size() <= 1000 &&
+        data.eventDate is string && data.eventDate.size() >= 1 && data.eventDate.size() <= 64 &&
+        data.type in ['Assignment', 'Quiz', 'Presentation', 'Lab Final', 'Exam', 'Class Test', 'Other'] &&
+        (!('subjectId' in data) || data.subjectId == '' || isValidId(data.subjectId));
+    }
+
+    function isValidSemesterGPA(data) {
+      return data.keys().hasAll(['id', 'gpa', 'credits']) &&
+        data.keys().hasOnly(['id', 'gpa', 'credits']) &&
+        data.id is number && data.id >= 1 && data.id <= 20 &&
+        data.gpa is number && data.gpa >= 0 && data.gpa <= 4.0 &&
+        data.credits is number && data.credits >= 0 && data.credits <= 100;
+    }
+
+    // Per-user data structure: users/{userId}
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) &&
+        (isValidUserProfile(incoming()) || isValidUserRootDoc(incoming()));
+      allow update: if isOwner(userId) && isValidId(userId) &&
+        (isValidUserProfile(incoming()) || isValidUserRootDoc(incoming()));
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // users/{userId}/profile/{profileId}
+      match /profile/{profileId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(profileId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(profileId) &&
+          isValidUserProfile(incoming());
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(profileId) &&
+          isValidUserProfile(incoming()) &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'profilePic', 'targetGPA', 'greeting', 'studentId',
+            'department', 'semester', 'batch', 'email', 'phone', 'address', 'theme'
+          ]);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(profileId);
+      }
+
+      // users/{userId}/subjects/{subjectId}
+      match /subjects/{subjectId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(subjectId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(subjectId) &&
+          isValidSubject(incoming(), subjectId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(subjectId) &&
+          isValidSubject(incoming(), subjectId) &&
+          incoming().id == existing().id &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'creditHours', 'colorTag']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(subjectId);
+      }
+
+      // users/{userId}/attendance/{attendanceId}
+      match /attendance/{attendanceId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(attendanceId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(attendanceId) &&
+          isValidAttendance(incoming(), attendanceId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(attendanceId) &&
+          isValidAttendance(incoming(), attendanceId) &&
+          incoming().id == existing().id &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['subjectId', 'date', 'isPresent']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(attendanceId);
+      }
+
+      // users/{userId}/ctMarks/{ctMarkId}
+      match /ctMarks/{ctMarkId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(ctMarkId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(ctMarkId) &&
+          isValidCTMark(incoming(), ctMarkId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(ctMarkId) &&
+          isValidCTMark(incoming(), ctMarkId) &&
+          incoming().id == existing().id &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['subjectId', 'subjectName', 'examName', 'markObtained', 'totalMark']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(ctMarkId);
+      }
+
+      // users/{userId}/events/{eventId}
+      match /events/{eventId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(eventId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(eventId) &&
+          isValidAcademicEvent(incoming(), eventId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(eventId) &&
+          isValidAcademicEvent(incoming(), eventId) &&
+          incoming().id == existing().id &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'eventDate', 'type', 'subjectId']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(eventId);
+      }
+
+      // users/{userId}/semesters/{semesterId}
+      match /semesters/{semesterId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(semesterId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(semesterId) &&
+          isValidSemesterGPA(incoming());
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(semesterId) &&
+          isValidSemesterGPA(incoming()) &&
+          incoming().id == existing().id &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['gpa', 'credits']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(semesterId);
+      }
+    }
+  }
+}

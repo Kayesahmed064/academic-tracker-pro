@@ -1,0 +1,32 @@
+node_modules/
+dist/
+build/
+coverage/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Android / Gradle generated files
+android/.gradle/
+android/build/
+android/app/build/
+android/.idea/
+android/local.properties
+android/captures/
+android/*.iml
+android/app/*.iml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

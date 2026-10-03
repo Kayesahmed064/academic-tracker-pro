@@ -1,0 +1,291 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Academic profile and preferences for an individual student user.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the student",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "profilePic": {
+          "type": "string",
+          "description": "Profile picture URL or data URI",
+          "maxLength": 500000
+        },
+        "targetGPA": {
+          "type": "number",
+          "description": "Target GPA goal (0.0 to 4.0)"
+        },
+        "greeting": {
+          "type": "string",
+          "description": "Personalized dashboard greeting",
+          "maxLength": 120
+        },
+        "studentId": {
+          "type": "string",
+          "description": "University student identification number",
+          "maxLength": 64
+        },
+        "department": {
+          "type": "string",
+          "description": "Academic department name",
+          "maxLength": 120
+        },
+        "semester": {
+          "type": "string",
+          "description": "Current academic semester label",
+          "maxLength": 64
+        },
+        "batch": {
+          "type": "string",
+          "description": "Student batch or cohort year range",
+          "maxLength": 64
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Student email address",
+          "maxLength": 150
+        },
+        "phone": {
+          "type": "string",
+          "description": "Student contact phone number",
+          "maxLength": 50
+        },
+        "address": {
+          "type": "string",
+          "description": "Student residential or dormitory address",
+          "maxLength": 250
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark"],
+          "description": "UI theme preference"
+        },
+        "ctMarks": {
+          "type": "array",
+          "description": "Array of CT marks belonging to the student user"
+        },
+        "subjectMarks": {
+          "type": "object",
+          "description": "Nested map of subjects to their marks array, e.g. { Physics: [{ examName, markObtained, totalMark }] }"
+        },
+        "subjects": {
+          "type": "array",
+          "description": "Array of user subjects stored directly in the user document"
+        }
+      },
+      "required": [
+        "name",
+        "targetGPA",
+        "greeting",
+        "studentId",
+        "department",
+        "semester",
+        "batch",
+        "email",
+        "phone",
+        "address"
+      ]
+    },
+    "Subject": {
+      "title": "Subject",
+      "description": "Academic course or subject enrolled by the user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique subject identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Subject title",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "creditHours": {
+          "type": "number",
+          "description": "Course credit hours"
+        },
+        "colorTag": {
+          "type": "string",
+          "description": "Hex color or tag identifier for UI display",
+          "maxLength": 32
+        }
+      },
+      "required": ["id", "name", "creditHours", "colorTag"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily class attendance record for a specific subject.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique attendance record identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "ID of the associated subject",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "description": "ISO date string for the attendance entry",
+          "maxLength": 64
+        },
+        "isPresent": {
+          "type": "boolean",
+          "description": "Whether the student was present"
+        }
+      },
+      "required": ["id", "subjectId", "date", "isPresent"]
+    },
+    "CTMark": {
+      "title": "CTMark",
+      "description": "Class Test (CT) or assessment score record for a subject.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique CT mark identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "ID of the associated subject",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "subjectName": {
+          "type": "string",
+          "description": "Name of the associated subject",
+          "maxLength": 150
+        },
+        "examName": {
+          "type": "string",
+          "description": "Name of the exam or assessment (e.g., CT 1, CT 2, Quiz)",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "markObtained": {
+          "type": "number",
+          "description": "Score achieved by the student"
+        },
+        "totalMark": {
+          "type": "number",
+          "description": "Maximum possible score for the exam"
+        }
+      },
+      "required": ["id", "subjectId", "examName", "markObtained", "totalMark"]
+    },
+    "AcademicEvent": {
+      "title": "AcademicEvent",
+      "description": "Scheduled academic event such as a Class Test, Quiz, Assignment, Presentation, Exam, or Lab Final.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique event identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the academic event",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed notes or syllabus topics for the event",
+          "maxLength": 1000
+        },
+        "eventDate": {
+          "type": "string",
+          "description": "Scheduled date and time in ISO format",
+          "maxLength": 64
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Assignment",
+            "Quiz",
+            "Presentation",
+            "Lab Final",
+            "Exam",
+            "Class Test",
+            "Other"
+          ],
+          "description": "Category of the academic event"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Optional associated subject ID",
+          "maxLength": 128
+        }
+      },
+      "required": ["id", "title", "description", "eventDate", "type"]
+    },
+    "SemesterGPA": {
+      "title": "SemesterGPA",
+      "description": "Semester GPA and credit hour summary record.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Semester number (e.g., 1 through 8)"
+        },
+        "gpa": {
+          "type": "number",
+          "description": "Grade Point Average for the semester (0.0 to 4.0)"
+        },
+        "credits": {
+          "type": "number",
+          "description": "Total credit hours completed in the semester"
+        }
+      },
+      "required": ["id", "gpa", "credits"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Root user document containing user profile metadata and theme settings."
+    },
+    "/users/{userId}/profile/{profileId}": {
+      "schema": "UserProfile",
+      "description": "Per-user profile document storing student details and preferences."
+    },
+    "/users/{userId}/subjects/{subjectId}": {
+      "schema": "Subject",
+      "description": "Per-user collection of enrolled academic subjects."
+    },
+    "/users/{userId}/attendance/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "Per-user collection of subject attendance records."
+    },
+    "/users/{userId}/ctMarks/{ctMarkId}": {
+      "schema": "CTMark",
+      "description": "Per-user collection of Class Test (CT) and assessment marks."
+    },
+    "/users/{userId}/events/{eventId}": {
+      "schema": "AcademicEvent",
+      "description": "Per-user collection of scheduled academic events and deadlines."
+    },
+    "/users/{userId}/semesters/{semesterId}": {
+      "schema": "SemesterGPA",
+      "description": "Per-user collection of semester GPA and credit records."
+    }
+  }
+}

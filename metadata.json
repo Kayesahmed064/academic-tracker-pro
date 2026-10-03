@@ -1,0 +1,8 @@
+{
+  "name": "Academic Tracker Pro",
+  "description": "A comprehensive, offline-first academic management system with CT prediction, attendance tracking, and study tools.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
